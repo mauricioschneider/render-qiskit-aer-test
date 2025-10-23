@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: qiskit-api
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT"
+    # Ensure this port is used if you are not using gunicorn/uvicorn. 
+    # The startCommand handles this correctly.
+    envVars:
+      - key: PORT
+        value: "10000"
