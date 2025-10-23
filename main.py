@@ -1,54 +1,84 @@
+# main.py
+
 from fastapi import FastAPI
 from qiskit import QuantumCircuit
-from qiskit_aer import AerSimulator
+# Note: For Qiskit 1.x, the 'Aer' object is typically accessed 
+# via the qiskit_aer package, but we can also check for the 
+# legacy access point if needed. For simplicity and correctness
+# with the newer versions, we'll import AerSimulator for the modern route
+# and demonstrate the get_backend approach in the function itself.
+from qiskit_aer import AerSimulator # Used for the original endpoint
+# Import the legacy access point for the Qiskit.Aer path
+from qiskit.providers.aer import Aer # Required for the legacy get_backend call
 
 # Initialize the FastAPI application
 app = FastAPI(
     title="Qiskit Quantum Circuit Simulator",
-    description="Exposes a minimal Qiskit circuit simulation as an HTTP endpoint."
+    description="Exposes minimal Qiskit circuit simulations using both modern and legacy Aer methods."
 )
 
-@app.get("/run-circuit")
-def run_quantum_circuit():
-    """
-    Creates, simulates, and returns the results for a single-qubit 
-    superposition circuit (Hadamard gate).
-    """
-    
-    # --- Qiskit Simulation Logic ---
-    
-    # 1. Create a quantum circuit (1 qubit, 1 classical bit)
+def build_circuit():
+    """Helper function to build the common circuit."""
     qc = QuantumCircuit(1, 1)
-
-    # 2. Apply a Hadamard gate (H) for superposition
     qc.h(0)
-
-    # 3. Measure the qubit
     qc.measure(0, 0)
+    return qc
 
-    # 4. Set up the Aer simulator
-    simulator = AerSimulator()
+@app.get("/run-circuit-modern")
+def run_modern_quantum_circuit():
+    """
+    Uses the modern Qiskit 1.x method: qiskit_aer.AerSimulator().
+    """
     
-    # Define the number of shots
+    # Build the circuit
+    qc = build_circuit()
+    
+    # Set up the Aer simulator using the modern approach
+    simulator = AerSimulator()
     shots = 1024
     
-    # 5. Run the circuit on the simulator
+    # Run the circuit
     job = simulator.run(qc, shots=shots)
 
-    # 6. Get the results and the counts
+    # Get the results
     result = job.result()
     counts = result.get_counts(qc)
     
-    # 7. Return the results as a dictionary (which FastAPI converts to JSON)
     return {
-        "status": "success",
+        "method": "Modern (qiskit_aer.AerSimulator())",
         "shots_run": shots,
-        "circuit_description": "Single qubit in superposition (H gate, then measure).",
         "measurement_counts": counts
     }
 
-# Example to run locally (Render handles the execution using the 'gunicorn' command below)
+@app.get("/run-circuit-legacy")
+def run_legacy_quantum_circuit():
+    """
+    Uses the older, explicit Qiskit method: qiskit.Aer.get_backend("qasm_simulator").
+    """
+    
+    # Build the circuit
+    qc = build_circuit()
+    
+    # 4. Set up the Aer simulator using the legacy approach
+    # We access the QASM simulator via the qiskit.providers.aer.Aer object
+    # This is equivalent to the old qiskit.Aer.get_backend
+    simulator = Aer.get_backend("qasm_simulator")
+    shots = 1024
+    
+    # 5. Run the circuit
+    job = simulator.run(qc, shots=shots)
+
+    # 6. Get the results
+    result = job.result()
+    counts = result.get_counts(qc)
+    
+    return {
+        "method": "Legacy (Aer.get_backend('qasm_simulator'))",
+        "shots_run": shots,
+        "measurement_counts": counts
+    }
+
+# Example to run locally (Render handles the execution)
 if __name__ == "__main__":
     import uvicorn
-    # This is for local testing: 'http://127.0.0.1:8000/run-circuit'
     uvicorn.run(app, host="0.0.0.0", port=8000)
