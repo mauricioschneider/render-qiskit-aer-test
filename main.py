@@ -2,13 +2,15 @@
 
 from fastapi import FastAPI
 from qiskit import QuantumCircuit
-# Import Qiskit-Aer components directly
-from qiskit_aer import AerSimulator # The class for the modern method
+# 1. Modern Import: Use the universal simulator class directly
+from qiskit_aer import AerSimulator
+# 2. Legacy-Style Import: Import the Aer object to access its get_backend method
+from qiskit_aer import Aer 
 
 # Initialize the FastAPI application
 app = FastAPI(
     title="Qiskit Quantum Circuit Simulator",
-    description="Exposes minimal Qiskit circuit simulations using modern and legacy-style Aer access."
+    description="Exposes minimal Qiskit circuit simulations using distinct Aer access methods."
 )
 
 def build_circuit():
@@ -18,6 +20,9 @@ def build_circuit():
     qc.measure(0, 0)
     return qc
 
+# -----------------------------------------------------------
+# MODERN PATH: Direct class instantiation
+# -----------------------------------------------------------
 @app.get("/run-circuit-modern")
 def run_modern_quantum_circuit():
     """
@@ -27,6 +32,7 @@ def run_modern_quantum_circuit():
     qc = build_circuit()
     
     # Modern approach: Instantiate the general simulator class
+    # This is the standard, recommended way in Qiskit 1.x
     simulator = AerSimulator()
     shots = 1024
     
@@ -41,25 +47,23 @@ def run_modern_quantum_circuit():
         "measurement_counts": counts
     }
 
+# -----------------------------------------------------------
+# LEGACY-STYLE PATH: Using Aer.get_backend
+# -----------------------------------------------------------
 @app.get("/run-circuit-legacy")
 def run_legacy_quantum_circuit():
     """
-    Simulates the behavior of qiskit.Aer.get_backend("qasm_simulator") 
-    using the Qiskit 1.x compatible path.
+    Simulates the behavior of the deprecated qiskit.Aer.get_backend("qasm_simulator") 
+    by using the Aer object imported from qiskit_aer.
     """
     
     qc = build_circuit()
     
-    # Qiskit 1.x compatible way to get the QASM simulator
-    # By default, AerSimulator *is* the QASM simulator unless a method is specified.
-    # To mimic the explicit 'qasm_simulator' selection, we use AerSimulator directly.
-    simulator = AerSimulator() 
+    # Legacy-style approach: Call the get_backend method on the Aer object.
+    # NOTE: In Qiskit 1.x, this 'Aer' object *must* be imported from qiskit_aer.
+    # The result is the same type of simulator as AerSimulator().
+    simulator = Aer.get_backend("qasm_simulator") 
     shots = 1024
-    
-    # --- NOTE ON SIMULATION METHOD ---
-    # In Qiskit 1.x, you typically configure AerSimulator() with a 'method' 
-    # to select a specific backend (e.g., 'statevector', 'density_matrix').
-    # Without a method, it defaults to a 'qasm_simulator'-like behavior.
     
     job = simulator.run(qc, shots=shots)
 
@@ -67,7 +71,7 @@ def run_legacy_quantum_circuit():
     counts = result.get_counts(qc)
     
     return {
-        "method": "Legacy-Style Access (qiskit_aer.AerSimulator() used to mimic 'qasm_simulator')",
+        "method": "Legacy-Style (qiskit_aer.Aer.get_backend('qasm_simulator'))",
         "shots_run": shots,
         "measurement_counts": counts
     }
