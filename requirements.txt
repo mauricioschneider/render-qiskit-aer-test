@@ -2,3 +2,4 @@ qiskit==1.2.4
 qiskit-aer==0.15.1
 fastapi
 uvicorn[standard]
+gunicorn
